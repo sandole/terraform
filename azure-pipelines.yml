@@ -1,0 +1,61 @@
+stages:
+- stage: validate
+  jobs:
+  - job: validate
+    continueOnError: false
+    steps:
+     - task: TerraformInstaller@0
+       displayName: 'install'
+       inputs:
+         terraformVersion: '1.1.4'
+     - task: TerraformTaskV2@2
+       displayName: 'init'
+       inputs:
+          provider: 'azurerm'
+          command: 'init'
+          backendServiceArm: 'Azure subscription 1(75504674-ba57-49c7-b1e2-658d294262f7)'
+          backendAzureRmResourceGroupName: 'terraform-rg'
+          backendAzureRmStorageAccountName: 'johnseongaccount'
+          backendAzureRmContainerName: 'johnseongcontainer'
+          backendAzureRmKey: 'terraform.tfstate'
+     - task: TerraformTaskV2@2
+       displayName: 'validate'
+       inputs:
+          provider: 'azurerm'
+          command: 'validate'
+- stage: deploy
+  jobs:
+    - deployment: deploy_terraform
+      continueOnError: false
+      environment: 'dev'
+      strategy: 
+       runOnce:
+         deploy:
+          steps:
+            - checkout: self
+            - task: TerraformInstaller@0
+              displayName: 'install'
+              inputs:
+                terraformVersion: '1.1.4'
+            - task: TerraformTaskV2@2
+              displayName: 'init'
+              inputs:
+                provider: 'azurerm'
+                command: 'init'
+                backendServiceArm: 'azure-spn'
+                backendAzureRmResourceGroupName: 'terraform-rg'
+                backendAzureRmStorageAccountName: 'johnseongaccount'
+                backendAzureRmContainerName: 'johnseongcontainer'
+                backendAzureRmKey: 'terraform.tfstate'
+            - task: TerraformTaskV2@2
+              displayName: 'plan'
+              inputs:
+                provider: 'azurerm'
+                command: 'plan'
+                environmentServiceNameAzureRM: 'azure-spn'
+            - task: TerraformTaskV2@2
+              displayName: 'apply'
+              inputs:
+                provider: 'azurerm'
+                command: 'apply'
+                environmentServiceNameAzureRM: 'azure-spn'
